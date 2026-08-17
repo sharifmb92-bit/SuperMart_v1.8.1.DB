@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Súper Control Familiar TOTAL v1.8.1</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Motor OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6F4E37">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <style>
+        :root { 
+            --fondo: #6F4E37; --tarjeta: #E6D5B8; --texto: #3D2B1F; 
+            --gris: #4d4d4d; --azul: #2C5E8A; --verde: #27ae60; --rojo: #c0392b;
+            --fuente-btn: 13px;
+        }
+        body.noche { --fondo: #2c1e16; --tarjeta: #5d4037; --texto: #f5f5f5; }
+
+        body { font-family: sans-serif; background: var(--fondo); margin: 0; padding-bottom: 260px; color: white; transition: 0.3s; overflow-x: hidden; position: relative; }
+        
+        .header { background: var(--tarjeta); padding: 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.3); color: var(--texto); }
+        .controles-extra { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .btn-mini { background: rgba(0,0,0,0.1); border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 14px; color: var(--texto); cursor: pointer; }
+
+        .buscador-caja { margin-bottom: 8px; }
+        .buscador-input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); box-sizing: border-box; font-size: 13px; }
+
+        .total-info { display: flex; justify-content: space-between; align-items: center; }
+        #total { font-size: 28px; font-weight: bold; }
+
+        .contenedor-semaforo { width: 100%; background: #ccc; height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 0; }
+        #barra-progreso { width: 0%; height: 100%; background: var(--verde); transition: 0.5s; }
+
+        .selector-unidades { display: flex; justify-content: space-around; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 12px; margin: 10px; align-items: center; }
+        .u-btn { background: var(--tarjeta); border: none; padding: 10px 18px; border-radius: 8px; color: var(--texto); font-weight: bold; cursor: pointer; }
+        .u-btn.active { background: var(--azul); color: white; transform: scale(1.1); }
+
+        .tabs { display: flex; gap: 5px; padding: 0 10px; margin-bottom: 10px; }
+        .tab { flex: 1; text-align: center; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; background: rgba(0,0,0,0.2); cursor: pointer; }
+        .tab.active { background: var(--fondo); color: white; }
+
+        .pantalla { display: none; padding: 10px; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .pantalla.active { display: grid; }
+        
+        .boton { background: var(--tarjeta); border-radius: 15px; padding: 12px; display: flex; flex-direction: column; align-items: center; border: none; color: var(--texto); box-shadow: 0 3px 6px rgba(0,0,0,0.2); position: relative; cursor: pointer; }
+        .boton.resaltado { outline: 3px solid #f1c40f; transform: scale(1.03); }
+        .boton i { font-size: 26px; margin-bottom: 6px; }
+        .boton span { font-weight: bold; font-size: var(--fuente-btn); text-align: center; line-height: 1.1; }
+        .boton .subtotal-tag { font-size: 11px; font-weight: bold; color: var(--azul); margin-top: 5px; background: rgba(255,255,255,0.7); padding: 2px 8px; border-radius: 10px; display: inline-block; max-width: 85%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .historial { background: rgba(0,0,0,0.2); margin: 10px; padding: 12px; border-radius: 10px; font-size: 14px; cursor: pointer; transition: 0.2s; }
+        .historial:active { background: rgba(0,0,0,0.35); }
+
+        .panel-fijo { position: fixed; bottom: 0; left: 0; right: 0; background: #2D3436; padding: 12px; border-top: 3px solid var(--tarjeta); z-index: 200; }
+        .fila-ajuste { display: flex; justify-content: space-around; align-items: center; }
+        .btn-a { width: 50px; height: 50px; border-radius: 25px; border: none; color: white; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 300; align-items: center; justify-content: center; padding: 15px; }
+        .modal.active { display: flex; }
+        .modal-contenido { background: var(--tarjeta); color: var(--texto); padding: 18px; border-radius: 15px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; box-sizing: border-box; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 8px; }
+        .item-carro { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.08); }
+
+        .item-habitual-card { background: rgba(0,0,0,0.05); padding: 10px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .item-habitual-info { display: flex; flex-direction: column; gap: 4px; }
+        .item-habitual-precio-badge { background: var(--azul); color: white; font-size: 12px; font-weight: bold; padding: 2px 8px; border-radius: 6px; align-self: flex-start; }
+        .item-habitual-acciones { display: flex; gap: 6px; align-items: center; }
+
+        .form-nuevo-producto { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 10px; }
+        .inputs-linea { display: flex; gap: 8px; }
+        .inputs-linea input { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 13px; box-sizing: border-box; }
+        .botones-accion-linea { display: flex; gap: 8px; align-items: center; }
+        .btn-accion { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+        .btn-ayuda-cam { background: rgba(0,0,0,0.15); border: none; border-radius: 50%; width: 32px; height: 32px; font-weight: bold; font-size: 14px; color: var(--texto); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+
+        .calc-pantalla { background: #222; color: #00ff66; text-align: right; font-size: 24px; font-family: monospace; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .btn-calc { padding: 14px 5px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; background: rgba(0,0,0,0.1); color: var(--texto); cursor: pointer; text-align: center; }
+        .btn-calc.op { background: var(--azul); color: white; }
+        .btn-calc.igual { background: var(--verde); color: white; }
+        .btn-calc.zero { grid-column: span 2; }
+        .box-oferta { background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px; margin-top: 12px; }
+        .box-oferta input { padding: 6px; border-radius: 6px; border: 1px solid #ccc; width: 60px; font-size: 12px; }
+
+        .tarjeta-compra-guardada { background: rgba(0,0,0,0.05); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+        .tarjeta-compra-header { font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; cursor: pointer; }
+        .tarjeta-compra-detalle { margin-top: 10px; border-top: 1px dashed rgba(0,0,0,0.2); padding-top: 8px; font-size: 15px; line-height: 1.6; }
+
+        .cam-preview { width: 100%; height: 180px; background: black; border-radius: 10px; margin-bottom: 10px; object-fit: cover; }
+
+        .f { color: #D35400; } .c { color: #A93226; } .l { color: #2E86C1; } .h { color: #512E5F; } .d { color: #795548; }
+
+        .brand-stamp { position: absolute; bottom: 5px; right: 8px; font-size: 9px; opacity: 0.25; color: var(--texto); pointer-events: none; user-select: none; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="controles-extra">
+        <div>
+            <button class="btn-mini" onclick="ajustarLetra(1)">T+</button>
+            <button class="btn-mini" onclick="ajustarLetra(-1)">T-</button>
+            <button class="btn-mini" onclick="toggleModoNoche()"><i class="fas fa-moon"></i></button>
+        </div>
+        <div>
+            <button class="btn-mini" style="background:var(--azul); color:white;" onclick="abrirModal('modal-calc')"><i class="fas fa-calculator"></i></button>
+            <button class="btn-mini" onclick="abrirModal('modal-desglose')"><i class="fas fa-shopping-basket"></i> Ver Carro</button>
+            <button class="btn-mini" onclick="abrirModal('modal-ajustes')"><i class="fas fa-gear"></i></button>
+        </div>
+    </div>
+    <div class="buscador-caja">
+        <input type="text" class="buscador-input" id="buscador" placeholder="🔍 Buscar producto (ej. aceitunas, lentejas)..." oninput="filtrarProductos()">
+    </div>
+    <div class="total-info">
+        <div><h1 style="margin:0; font-size:18px;">🛒 Gasto Familiar</h1><small id="status">Límite: 150.00€</small></div>
+        <div class="total-caja"><span id="total">0.00€</span></div>
+    </div>
+    <div class="contenedor-semaforo"><div id="barra-progreso"></div></div>
+    <div class="tabs">
+        <div class="tab active" id="t1" onclick="cambiarTab(1)">ALIMENTACIÓN</div>
+        <div class="tab" id="t2" onclick="cambiarTab(2)">HOGAR Y VARIOS</div>
+    </div>
+</div>
+
+<div class="selector-unidades">
+    <span style="font-weight:bold">Uds:</span>
+    <button class="u-btn active" onclick="setU(1, this)">1</button>
+    <button class="u-btn" onclick="setU(2, this)">2</button>
+    <button class="u-btn" onclick="setU(3, this)">3</button>
+    <button class="u-btn" onclick="setU(6, this)">6</button>
+    <button class="u-btn" onclick="setU(12, this)">12</button>
+</div>
+
+<div class="pantalla active" id="p1">
+    <button class="boton" id="btn-Fruta" onclick="abrirCategoria('Fruta')"><i class="fas fa-apple-whole f"></i><span>Fruta</span><span class="subtotal-tag" id="sub-Fruta">0.00€</span></button>
+    <button class="boton" id="btn-Verdura" onclick="abrirCategoria('Verdura')"><i class="fas fa-carrot f"></i><span>Verdura</span><span class="subtotal-tag" id="sub-Verdura">0.00€</span></button>
+    <button class="boton" id="btn-Carne" onclick="abrirCategoria('Carne')"><i class="fas fa-drumstick-bite c"></i><span>Carnicería</span><span class="subtotal-tag" id="sub-Carne">0.00€</span></button>
+    <button class="boton" id="btn-Pescado" onclick="abrirCategoria('Pescado')"><i class="fas fa-fish l"></i><span>Pescadería</span><span class="subtotal-tag" id="sub-Pescado">0.00€</span></button>
+    <button class="boton" id="btn-Leche" onclick="abrirCategoria('Leche')"><i class="fas fa-droplet l"></i><span>Leche</span><span class="subtotal-tag" id="sub-Leche">0.00€</span></button>
+    <button class="boton" id="btn-Yogures" onclick="abrirCategoria('Yogures')"><i class="fas fa-ice-cream l"></i><span>Lácteos</span><span class="subtotal-tag" id="sub-Yogures">0.00€</span></button>
+    <button class="boton" id="btn-Embutido" onclick="abrirCategoria('Embutido')"><i class="fas fa-bacon c"></i><span>Embutidos</span><span class="subtotal-tag" id="sub-Embutido">0.00€</span></button>
+    <button class="boton" id="btn-Pan" onclick="abrirCategoria('Pan')"><i class="fas fa-bread-slice d"></i><span>Pan/Bollería</span><span class="subtotal-tag" id="sub-Pan">0.00€</span></button>
+    <button class="boton" id="btn-Pasta/Arroz" onclick="abrirCategoria('Pasta/Arroz')"><i class="fas fa-box d"></i><span>Legumbres/Pasta/Arroz</span><span class="subtotal-tag" id="sub-Pasta/Arroz">0.00€</span></button>
+    <button class="boton" id="btn-Huevos" onclick="abrirCategoria('Huevos')"><i class="fas fa-egg d"></i><span>Huevos</span><span class="subtotal-tag" id="sub-Huevos">0.00€</span></button>
+</div>
+
+<div class="pantalla" id="p2">
+    <button class="boton" id="btn-Aceite" onclick="abrirCategoria('Aceite')"><i class="fas fa-oil-can d"></i><span>Aceites</span><span class="subtotal-tag" id="sub-Aceite">0.00€</span></button>
+    <button class="boton" id="btn-Conservas" onclick="abrirCategoria('Conservas')"><i class="fas fa-jar d"></i><span>Conservas/Aceitunas</span><span class="subtotal-tag" id="sub-Conservas">0.00€</span></button>
+    <button class="boton" id="btn-Café" onclick="abrirCategoria('Café')"><i class="fas fa-mug-hot d"></i><span>Café/Cacao</span><span class="subtotal-tag" id="sub-Café">0.00€</span></button>
+    <button class="boton" id="btn-Bebidas" onclick="abrirCategoria('Bebidas')"><i class="fas fa-bottle-water l"></i><span>Bebidas</span><span class="subtotal-tag" id="sub-Bebidas">0.00€</span></button>
+    <button class="boton" id="btn-Dulces" onclick="abrirCategoria('Dulces')"><i class="fas fa-cookie c"></i><span>Snacks/Dulces</span><span class="subtotal-tag" id="sub-Dulces">0.00€</span></button>
+    <button class="boton" id="btn-Congelado" onclick="abrirCategoria('Congelado')"><i class="fas fa-snowflake l"></i><span>Congelados</span><span class="subtotal-tag" id="sub-Congelado">0.00€</span></button>
+    <button class="boton" id="btn-Limpieza" onclick="abrirCategoria('Limpieza')"><i class="fas fa-soap h"></i><span>Limpieza</span><span class="subtotal-tag" id="sub-Limpieza">0.00€</span></button>
+    <button class="boton" id="btn-Aseo" onclick="abrirCategoria('Aseo')"><i class="fas fa-pump-soap h"></i><span>Higiene</span><span class="subtotal-tag" id="sub-Aseo">0.00€</span></button>
+    <button class="boton" id="btn-Papel/Varios" onclick="abrirCategoria('Papel/Varios')"><i class="fas fa-toilet-paper h"></i><span>Papel/Varios</span><span class="subtotal-tag" id="sub-Papel/Varios">0.00€</span></button>
+    <button class="boton" id="btn-Mascotas" onclick="abrirCategoria('Mascotas')"><i class="fas fa-dog h"></i><span>Mascotas</span><span class="subtotal-tag" id="sub-Mascotas">0.00€</span></button>
+</div>
+
+<div class="historial" id="hist-list" onclick="abrirModal('modal-historial')"><b>Última Compra:</b> Cargando...</div>
+
+<div class="panel-fijo">
+    <div class="fila-ajuste">
+        <button class="btn-a" style="background:#7f8c8d" onclick="deshacer()" title="Deshacer"><i class="fas fa-rotate-left"></i></button>
+        <button class="btn-a" style="background:var(--rojo)" onclick="sumar('DTO', -1.00, 'Ajuste')">-1€</button>
+        <button class="btn-a" style="background:var(--azul)" onclick="sumar('Ajuste', 0.10, 'Ajuste')">+10c</button>
+        <button class="btn-a" style="background:var(--azul)" onclick="sumar('Ajuste', 0.50, 'Ajuste')">+50c</button>
+        <button class="btn-a" style="background:var(--azul)" onclick="sumar('Ajuste', 1.00, 'Ajuste')">+1€</button>
+        <button class="btn-a" style="background:var(--verde); width: 90px; border-radius: 10px;" onclick="guardarCompra()">PAGAR</button>
+    </div>
+</div>
+
+<!-- Modal Calculadora Completa -->
+<div class="modal" id="modal-calc">
+    <div class="modal-contenido">
+        <div class="modal-header">
+            <h3 style="margin:0;">🧮 Calculadora & Ofertas</h3>
+            <button class="btn-mini" onclick="cerrarModal('modal-calc')">✕</button>
+        </div>
+        <div class="calc-pantalla" id="calc-display">0</div>
+        <div class="calc-grid">
+            <button class="btn-calc" onclick="calcInput('C')">C</button>
+            <button class="btn-calc op" onclick="calcInput('/')">/</button>
+            <button class="btn-calc op" onclick="calcInput('*')">×</button>
+            <button class="btn-calc op" onclick="calcInput('-')">-</button>
+
+            <button class="btn-calc" onclick="calcInput('7')">7</button>
+            <button class="btn-calc" onclick="calcInput('8')">8</button>
+            <button class="btn-calc" onclick="calcInput('9')">9</button>
+            <button class="btn-calc op" onclick="calcInput('+')">+</button>
+
+            <button class="btn-calc" onclick="calcInput('4')">4</button>
+            <button class="btn-calc" onclick="calcInput('5')">5</button>
+            <button class="btn-calc" onclick="calcInput('6')">6</button>
+            <button class="btn-calc op" onclick="usarResultadoCalc()" title="Copiar precio">📋 Usar</button>
+
+            <button class="btn-calc" onclick="calcInput('1')">1</button>
+            <button class="btn-calc" onclick="calcInput('2')">2</button>
+            <button class="btn-calc" onclick="calcInput('3')">3</button>
+            <button class="btn-calc op" onclick="calcInput('.')">.</button>
+
+            <button class="btn-calc zero" onclick="calcInput('0')">0</button>
+            <button class="btn-calc igual" style="grid-column: span 2;" onclick="calcInput('=')">=</button>
+        </div>
+
+        <div class="box-oferta">
+            <p style="margin:0 0 6px 0; font-size:12px; font-weight:bold;">⚖️ Calculador de Oferta / Peso:</p>
+            <div style="display:flex; gap:6px; align-items:center; font-size:12px;">
+                <span>Precio:</span><input type="number" id="of-precio" placeholder="€" step="0.01">
+                <span>Gramos:</span><input type="number" id="of-gramos" placeholder="g">
+                <button class="btn-mini" style="background:var(--azul); color:white;" onclick="calcularPrecioKilo()">= /Kg</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Categoria -->
+<div class="modal" id="modal-cat">
+    <div class="modal-contenido">
+        <div class="modal-header">
+            <h3 style="margin:0;" id="modal-cat-titulo">Categoría</h3>
+            <button class="btn-mini" onclick="cerrarModal('modal-cat')">✕</button>
+        </div>
+        
+        <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold;">⚡ Productos Frecuentes (Opción A):</p>
+        <div id="lista-frecuentes"></div>
+
+        <hr style="margin:15px 0; opacity:0.2;">
+        
+        <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold;">📝 Añadir Exacto / Escanear (Opción B):</p>
+        
+        <div id="cam-box" style="display:none;">
+            <video id="video" class="cam-preview" autoplay playsinline></video>
+            <button class="btn-mini" style="background:var(--azul); color:white; width:100%; margin-bottom:8px;" onclick="capturarYLeerPrecio()">📷 Capturar y Leer Precio</button>
+        </div>
+
+        <div class="form-nuevo-producto">
+            <div class="inputs-linea">
+                <input type="text" id="nuevo-nombre" placeholder="Nombre (ej. Aceitunas)" style="flex:2;">
+                <input type="number" id="nuevo-precio" placeholder="Precio €" step="0.01" style="flex:1;">
+            </div>
+            <div class="botones-accion-linea">
+                <button class="btn-accion" style="background:#8e44ad; color:white;" onclick="activarCamara()"><i class="fas fa-camera"></i> Escanear</button>
+                <button class="btn-ayuda-cam" onclick="toggleAyudaScanner()" title="Ayuda del escáner">?</button>
+                <button class="btn-accion" style="background:var(--verde); color:white;" onclick="agregarYGuardarNuevo()"><i class="fas fa-plus"></i> Añadir</button>
+            </div>
+            <div id="info-ayuda-escaner" style="display:none; background:rgba(44, 94, 138, 0.15); border-left:3px solid var(--azul); padding:8px; border-radius:6px; font-size:11px; margin-top:4px;">
+                📌 <strong>Consejo del Escáner:</strong> Acerca la cámara del móvil al cartel para enfocar <strong>únicamente la cifra del precio</strong>, muy cerca y evitando reflejos de luz para que la lectura sea exacta.
+            </div>
+        </div>
+        <p id="ocr-status" style="font-size:11px; color:var(--azul); margin-top:6px; text-align:center;"></p>
+    </div>
+</div>
+
+<!-- Modal Desglose Carro Actual -->
+<div class="modal" id="modal-desglose">
+    <div class="modal-contenido">
+        <div class="modal-header">
+            <h3 style="margin:0;">🛒 Productos en el Carro</h3>
+            <button class="btn-mini" onclick="cerrarModal('modal-desglose')">✕</button>
+        </div>
+        <div id="lista-carro"></div>
+    </div>
+</div>
+
+<!-- Modal Historial Detallado -->
+<div class="modal" id="modal-historial">
+    <div class="modal-contenido">
+        <div class="modal-header">
+            <h3 style="margin:0;">📜 Historial de Compras</h3>
+            <button class="btn-mini" onclick="cerrarModal('modal-historial')">✕</button>
+        </div>
+        <div id="lista-historial-detallado"></div>
+    </div>
+</div>
+
+<!-- Modal Ajustes -->
+<div class="modal" id="modal-ajustes">
+    <div class="modal-contenido">
+        <div class="modal-header">
+            <h3 style="margin:0;">⚙️ Configuración</h3>
+            <button class="btn-mini" onclick="cerrarModal('modal-ajustes')">✕</button>
+        </div>
+        <p><strong>Límite de Presupuesto (€):</strong></p>
+        <input type="number" id="input-limite" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box;" value="150">
+        <button class="btn-mini" style="background: var(--azul); color: white; width: 100%; margin-top: 8px; padding: 10px;" onclick="guardarLimite()">Guardar Límite</button>
+        
+        <hr style="margin: 25px 0 20px 0; opacity: 0.3;">
+        
+        <button class="btn-mini" style="background: var(--azul); color: white; width: 100%; padding: 12px; font-weight:bold; margin-bottom: 25px;" onclick="abrirHistorialDirecto()">📜 Ver Historial de Compras Guardadas</button>
+        
+        <div style="background: rgba(192, 57, 43, 0.1); padding: 10px; border-radius: 10px; border: 1px solid rgba(192, 57, 43, 0.3);">
+            <p style="margin:0 0 6px 0; font-size:11px; color:var(--rojo); font-weight:bold; text-align:center;">⚠️ ZONA DE PELIGRO</p>
+            <button class="btn-mini" style="background: var(--rojo); color: white; width: 100%; padding: 10px;" onclick="vaciarHistorial()">Borrar Historial Completo</button>
+        </div>
+    </div>
+</div>
+
+<div class="brand-stamp">medbasha</div>
+
+<script>
+    /* --- INTEGRACIÓN BASE DE DATOS INDEXEDDB AUTO-INICIALIZADA --- */
+    let db;
+    const dbName = "ControlGastoFamiliaDB";
+
+    function iniciarIndexedDB() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(dbName, 1);
+            req.onupgradeneeded = e => {
+                const database = e.target.result;
+                if (!database.objectStoreNames.contains('app_data')) {
+                    database.createObjectStore('app_data');
+                }
+            };
+            req.onsuccess = e => {
+                db = e.target.result;
+                resolve(db);
+            };
+            req.onerror = e => reject("Error iniciando IndexedDB");
+        });
+    }
+
+    function guardarDatosDB(clave, valor) {
+        if (!db) return;
+        const tx = db.transaction('app_data', 'readwrite');
+        const store = tx.objectStore('app_data');
+        store.put(valor, clave);
+    }
+
+    function obtenerDatoDB(clave) {
+        return new Promise((resolve) => {
+            if (!db) { resolve(null); return; }
+            const tx = db.transaction('app_data', 'readonly');
+            const store = tx.objectStore('app_data');
+            const req = store.get(clave);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => resolve(null);
+        });
+    }
+
+    const frecuentesBase = {
+        'Fruta': [{nombre: 'Manzanas', precio: 2.20}, {nombre: 'Plátanos', precio: 1.80}],
+        'Verdura': [{nombre: 'Tomates', precio: 2.10}, {nombre: 'Lechuga', precio: 1.00}],
+        'Carne': [{nombre: 'Pechuga Pollo', precio: 6.50}, {nombre: 'Carne Picada', precio: 5.00}],
+        'Limpieza': [{nombre: 'Detergente', precio: 4.50}, {nombre: 'Fregasuelos', precio: 1.80}],
+        'Leche': [{nombre: 'Pack Leche 6L', precio: 6.90}, {nombre: 'Litro Leche', precio: 1.15}],
+        'Pasta/Arroz': [{nombre: 'Lentejas Bote', precio: 0.90}, {nombre: 'Garbanzos', precio: 1.10}],
+        'Conservas': [{nombre: 'Aceitunas Bote', precio: 1.45}, {nombre: 'Lata Atún', precio: 2.50}]
+    };
+
+    let habituales = frecuentesBase;
+    let limitePresupuesto = 150;
+    let carroActual = [];
+    let historialCompras = [];
+    let categoriaActiva = '';
+    let uds = 1, fSize = 13;
+    let streamVideo = null;
+    let calcExpr = '';
+
+    if (localStorage.getItem('modo_noche') === 'true') {
+        document.body.classList.add('noche');
+    }
+
+    function toggleModoNoche() {
+        document.body.classList.toggle('noche');
+        localStorage.setItem('modo_noche', document.body.classList.contains('noche'));
+    }
+
+    function setU(n, btn) {
+        uds = n;
+        document.querySelectorAll('.u-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    function ajustarLetra(n) {
+        fSize += n;
+        document.documentElement.style.setProperty('--fuente-btn', fSize + 'px');
+    }
+
+    function cambiarTab(n) {
+        document.querySelectorAll('.tab, .pantalla').forEach(el => el.classList.remove('active'));
+        document.getElementById('t' + n).classList.add('active');
+        document.getElementById('p' + n).classList.add('active');
+    }
+
+    function sumar(nombre, precio, categoria) {
+        const importe = precio * uds;
+        carroActual.push({ id: Date.now(), nombre: nombre, categoria: categoria, precioUnitario: precio, unidades: uds, total: importe });
+        uds = 1;
+        resetSelectorUds();
+        actualizar();
+        if(navigator.vibrate) navigator.vibrate(40);
+    }
+
+    function deshacer() {
+        if (carroActual.length > 0) {
+            carroActual.pop();
+            actualizar();
+            if(navigator.vibrate) navigator.vibrate(60);
+        }
+    }
+
+    function eliminarDelCarro(id) {
+        carroActual = carroActual.filter(item => item.id !== id);
+        actualizar();
+        renderDesglose();
+    }
+
+    function resetSelectorUds() {
+        document.querySelectorAll('.u-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.u-btn')[0].classList.add('active');
+    }
+
+    function calcularTotal() {
+        return carroActual.reduce((acc, item) => acc + item.total, 0);
+    }
+
+    function actualizar() {
+        const total = calcularTotal();
+        localStorage.setItem('carro_temp', JSON.stringify(carroActual));
+        guardarDatosDB('carro_temp', carroActual);
+
+        document.getElementById('total').innerText = total.toFixed(2) + '€';
+        document.getElementById('status').innerText = `Límite: ${limitePresupuesto.toFixed(2)}€`;
+        
+        const porc = (total / limitePresupuesto) * 100;
+        const barra = document.getElementById('barra-progreso');
+        barra.style.width = Math.min(porc, 100) + "%";
+        barra.style.background = porc > 90 ? "var(--rojo)" : (porc > 70 ? "#f1c40f" : "var(--verde)");
+        
+        const hDiv = document.getElementById('hist-list');
+        if (historialCompras.length > 0) {
+            const ultima = historialCompras[0];
+            hDiv.innerHTML = `<b>🛒 Última compra (${ultima.fecha}):</b> ${ultima.total.toFixed(2)}€ <i>(Toca para ver la lista)</i>`;
+        } else {
+            hDiv.innerHTML = "<b>Última compra:</b> Sin compras recientes guardadas.";
+        }
+
+        const subtotales = {};
+        carroActual.forEach(item => {
+            subtotales[item.categoria] = (subtotales[item.categoria] || 0) + item.total;
+        });
+
+        document.querySelectorAll('.subtotal-tag').forEach(tag => {
+            const cat = tag.id.replace('sub-', '');
+            tag.innerText = (subtotales[cat] || 0).toFixed(2) + '€';
+        });
+    }
+
+    function filtrarProductos() {
+        const txt = document.getElementById('buscador').value.toLowerCase().trim();
+        document.querySelectorAll('.boton').forEach(btn => {
+            const textContent = btn.innerText.toLowerCase();
+            if(txt !== '' && textContent.includes(txt)) {
+                btn.classList.add('resaltado');
+            } else {
+                btn.classList.remove('resaltado');
+            }
+        });
+    }
+
+    function abrirCategoria(cat) {
+        categoriaActiva = cat;
+        document.getElementById('modal-cat-titulo').innerText = cat;
+        renderFrecuentes();
+        abrirModal('modal-cat');
+    }
+
+    function renderFrecuentes() {
+        const cont = document.getElementById('lista-frecuentes');
+        const lista = habituales[categoriaActiva] || [];
+        if(lista.length === 0) {
+            cont.innerHTML = "<p style='font-size:12px; color:gray;'>No hay productos frecuentes aún.</p>";
+            return;
+        }
+        cont.innerHTML = lista.map((prod, index) => `
+            <div class="item-habitual-card">
+                <div class="item-habitual-info">
+                    <strong>${prod.nombre}</strong>
+                    <span class="item-habitual-precio-badge">${prod.precio.toFixed(2)}€</span>
+                </div>
+                <div class="item-habitual-acciones">
+                    <button class="btn-mini" style="background:var(--verde); color:white; padding:8px 14px;" onclick="sumar('${prod.nombre}', ${prod.precio}, '${categoriaActiva}')">+ Añadir</button>
+                    <button class="btn-mini" style="background:var(--rojo); color:white;" onclick="eliminarHabitual(${index})">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function agregarYGuardarNuevo() {
+        const inputNombre = document.getElementById('nuevo-nombre');
+        const inputPrecio = document.getElementById('nuevo-precio');
+        const nombre = inputNombre.value.trim();
+        const precio = parseFloat(inputPrecio.value);
+
+        if(!nombre || isNaN(precio) || precio <= 0) return;
+
+        sumar(nombre, precio, categoriaActiva);
+
+        if(!habituales[categoriaActiva]) habituales[categoriaActiva] = [];
+        habituales[categoriaActiva].push({ nombre: nombre, precio: precio });
+        
+        localStorage.setItem('habituales_v130', JSON.stringify(habituales));
+        guardarDatosDB('habituales_v130', habituales);
+
+        inputNombre.value = '';
+        inputPrecio.value = '';
+        cerrarCamara();
+        renderFrecuentes();
+    }
+
+    function eliminarHabitual(index) {
+        habituales[categoriaActiva].splice(index, 1);
+        localStorage.setItem('habituales_v130', JSON.stringify(habituales));
+        guardarDatosDB('habituales_v130', habituales);
+        renderFrecuentes();
+    }
+
+    function toggleAyudaScanner() {
+        const box = document.getElementById('info-ayuda-escaner');
+        box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+
+    /* --- LÓGICA CALCULADORA --- */
+    function calcInput(val) {
+        const disp = document.getElementById('calc-display');
+        if (val === 'C') {
+            calcExpr = '';
+            disp.innerText = '0';
+        } else if (val === '=') {
+            try {
+                let res = eval(calcExpr);
+                calcExpr = res.toString();
+                disp.innerText = parseFloat(res).toFixed(2);
+            } catch (e) {
+                disp.innerText = 'Error';
+                calcExpr = '';
+            }
+        } else {
+            calcExpr += val;
+            disp.innerText = calcExpr;
+        }
+    }
+
+    function usarResultadoCalc() {
+        const val = parseFloat(document.getElementById('calc-display').innerText);
+        if (!isNaN(val) && val > 0) {
+            document.getElementById('nuevo-precio').value = val;
+            cerrarModal('modal-calc');
+        }
+    }
+
+    function calcularPrecioKilo() {
+        const p = parseFloat(document.getElementById('of-precio').value);
+        const g = parseFloat(document.getElementById('of-gramos').value);
+        if (!isNaN(p) && !isNaN(g) && g > 0) {
+            const precioKg = (p / g) * 1000;
+            calcExpr = precioKg.toFixed(2);
+            document.getElementById('calc-display').innerText = calcExpr;
+        }
+    }
+
+    async function activarCamara() {
+        const box = document.getElementById('cam-box');
+        const video = document.getElementById('video');
+        box.style.display = 'block';
+
+        try {
+            streamVideo = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            video.srcObject = streamVideo;
+        } catch(err) {
+            alert("No se pudo acceder a la cámara.");
+        }
+    }
+
+    function cerrarCamara() {
+        if(streamVideo) {
+            streamVideo.getTracks().forEach(track => track.stop());
+            streamVideo = null;
+        }
+        document.getElementById('cam-box').style.display = 'none';
+        document.getElementById('ocr-status').innerText = '';
+    }
+
+    async function capturarYLeerPrecio() {
+        const video = document.getElementById('video');
+        const status = document.getElementById('ocr-status');
+        status.innerText = "Leyendo precio del cartel...";
+
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+
+        try {
+            const worker = await Tesseract.createWorker('eng');
+            const ret = await worker.recognize(canvas);
+            await worker.terminate();
+
+            const match = ret.data.text.match(/\d+[.,]\d{2}/);
+            if(match) {
+                const precioEnc = parseFloat(match[0].replace(',', '.'));
+                document.getElementById('nuevo-precio').value = precioEnc;
+                status.innerText = `¡Precio detectado: ${precioEnc.toFixed(2)}€!`;
+            } else {
+                status.innerText = "No se detectó el precio claramente. Inténtalo más cerca.";
+            }
+        } catch(e) {
+            status.innerText = "Error procesando la imagen.";
+        }
+    }
+
+    function guardarCompra() {
+        const total = calcularTotal();
+        if(total === 0) return;
+        const fecha = new Date().toLocaleDateString('es-ES', {day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'});
+        
+        historialCompras.unshift({
+            id: Date.now(),
+            fecha: fecha,
+            total: total,
+            productos: [...carroActual]
+        });
+
+        if(historialCompras.length > 15) historialCompras.pop();
+        
+        localStorage.setItem('compras_detalladas_v150', JSON.stringify(historialCompras));
+        guardarDatosDB('compras_detalladas_v150', historialCompras);
+
+        carroActual = [];
+        localStorage.removeItem('carro_temp');
+        guardarDatosDB('carro_temp', []);
+
+        actualizar();
+        alert("¡Compra guardada con su desglose! Carro vacío para la siguiente.");
+    }
+
+    function abrirModal(id) {
+        if(id === 'modal-desglose') renderDesglose();
+        if(id === 'modal-historial') renderHistorialDetallado();
+        if(id === 'modal-ajustes') document.getElementById('input-limite').value = limitePresupuesto;
+        document.getElementById(id).classList.add('active');
+    }
+
+    function abrirHistorialDirecto() {
+        cerrarModal('modal-ajustes');
+        abrirModal('modal-historial');
+    }
+
+    function cerrarModal(id) {
+        if(id === 'modal-cat') cerrarCamara();
+        document.getElementById(id).classList.remove('active');
+    }
+
+    function renderDesglose() {
+        const cont = document.getElementById('lista-carro');
+        if(carroActual.length === 0) {
+            cont.innerHTML = "<p style='text-align:center;'>El carro está vacío.</p>";
+            return;
+        }
+        cont.innerHTML = carroActual.map(item => `
+            <div class="item-carro">
+                <div>
+                    <strong>${item.nombre}</strong> <small>(${item.unidades}x ${item.precioUnitario.toFixed(2)}€)</small><br>
+                    <span style="color:var(--azul); font-weight:bold;">${item.total.toFixed(2)}€</span>
+                </div>
+                <button class="btn-mini" style="background:var(--rojo); color:white;" onclick="eliminarDelCarro(${item.id})">🗑️</button>
+            </div>
+        `).join('');
+    }
+
+    function renderHistorialDetallado() {
+        const cont = document.getElementById('lista-historial-detallado');
+        if(historialCompras.length === 0) {
+            cont.innerHTML = "<p style='text-align:center;'>No hay compras guardadas en el historial.</p>";
+            return;
+        }
+        cont.innerHTML = historialCompras.map((compra, index) => `
+            <div class="tarjeta-compra-guardada">
+                <div class="tarjeta-compra-header" onclick="toggleDetalleCompra(${compra.id})">
+                    <span>📅 ${compra.fecha}</span>
+                    <span style="color:var(--azul);">${compra.total.toFixed(2)}€ 🔽</span>
+                </div>
+                <div id="det-compra-${compra.id}" class="tarjeta-compra-detalle" style="display:${index === 0 ? 'block' : 'none'};">
+                    ${compra.productos.map(p => `<div style="margin-bottom:6px;">• <strong>${p.nombre}</strong> (${p.unidades}x ${p.precioUnitario.toFixed(2)}€) = <strong>${p.total.toFixed(2)}€</strong></div>`).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function toggleDetalleCompra(id) {
+        const el = document.getElementById(`det-compra-${id}`);
+        if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function guardarLimite() {
+        const val = parseFloat(document.getElementById('input-limite').value);
+        if(!isNaN(val) && val > 0) {
+            limitePresupuesto = val;
+            localStorage.setItem('limite_v110', limitePresupuesto);
+            guardarDatosDB('limite_v110', limitePresupuesto);
+            actualizar();
+            cerrarModal('modal-ajustes');
+        }
+    }
+
+    function vaciarHistorial() {
+        if(confirm("¿Seguro que quieres borrar todo el historial de compras?")) {
+            historialCompras = [];
+            localStorage.removeItem('compras_detalladas_v150');
+            guardarDatosDB('compras_detalladas_v150', []);
+            actualizar();
+            cerrarModal('modal-ajustes');
+        }
+    }
+
+    /* --- CARGAR DATOS AUTOMÁTICAMENTE AL INICIAR --- */
+    async function cargarDatosIniciales() {
+        try {
+            await iniciarIndexedDB();
+            
+            const dbHabituales = await obtenerDatoDB('habituales_v130');
+            const dbLimite = await obtenerDatoDB('limite_v110');
+            const dbCarro = await obtenerDatoDB('carro_temp');
+            const dbHistorial = await obtenerDatoDB('compras_detalladas_v150');
+
+            habituales = dbHabituales || JSON.parse(localStorage.getItem('habituales_v130')) || frecuentesBase;
+            limitePresupuesto = dbLimite || parseFloat(localStorage.getItem('limite_v110')) || 150;
+            carroActual = dbCarro || JSON.parse(localStorage.getItem('carro_temp')) || [];
+            historialCompras = dbHistorial || JSON.parse(localStorage.getItem('compras_detalladas_v150')) || [];
+        } catch (e) {
+            habituales = JSON.parse(localStorage.getItem('habituales_v130')) || frecuentesBase;
+            limitePresupuesto = parseFloat(localStorage.getItem('limite_v110')) || 150;
+            carroActual = JSON.parse(localStorage.getItem('carro_temp')) || [];
+            historialCompras = JSON.parse(localStorage.getItem('compras_detalladas_v150')) || [];
+        }
+        actualizar();
+    }
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+
+    // Inicialización automática garantizada
+    document.addEventListener('DOMContentLoaded', cargarDatosIniciales);
+</script>
+</body>
+</html>
